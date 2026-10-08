@@ -54,22 +54,35 @@ scripts/ui.gd              panneaux, textes, polices, zones visables
 scripts/formes.gd          maillages : jetons, plaque trouée, dés, rideaux
 scripts/sons.gd            sons synthétisés
 scripts/confettis.gd       confettis de victoire
+scripts/cible.gd           cible visable générique (survol / choix)
+scripts/jeux/table_jeu.gd      BASE de tous les jeux de table (voir plus bas)
 scripts/jeux/puissance4.gd     Puissance 4
-scripts/jeux/puissance4_ia.gd  IA (fil séparé, temps limité)
-shaders/                   parquet, bois, papier peint, feutre, tapis, ciel, dé, panneaux
+scripts/jeux/puissance4_ia.gd  IA Puissance 4 (fil séparé, temps limité)
+scripts/jeux/reversi.gd        Reversi
+scripts/jeux/reversi_ia.gd     IA Reversi (poids des cases, mobilité, finale exacte)
+shaders/                   parquet, bois, papier peint, feutre, tapis, ciel, dé, panneaux, plateau Reversi
 ```
 
 ## Ajouter un jeu
 
-1. Créer `scripts/jeux/nom.gd` (`extends Node3D`) avec : `_init(app)`,
-   `depart` (`position`, `lacet`, `tangage`), `entrer()`, `sortir()`.
-   S'inspirer de `puissance4.gd`. Les éléments cliquables passent par
-   `UI.zone(...)` avec un objet qui a `survol(bool)` et `choisir()`.
-2. L'ajouter dans `JEUX` de `scripts/main.gd` (même identifiant que dans
-   `CATEGORIES` de `scripts/accueil.gd`). Le bouton passe seul de
-   « Bientôt » à « Jouer ».
-3. Toute IA va dans un `Thread`, avec une limite de temps : un calcul long
-   dans la boucle fait saccader l'image dans le casque.
+`scripts/jeux/table_jeu.gd` fournit tout le commun : bandeau d'état,
+tableau des scores, boutons (nouvelle partie, contre l'ordinateur / à deux,
+niveau, retour au salon), IA dans un fil séparé, animations d'apparition et
+de disparition, confettis, annonce de fin.
+
+1. Créer `scripts/jeux/nom.gd` avec
+   `extends "res://scripts/jeux/table_jeu.gd"`, un `_init(p_app)` qui
+   appelle `super()` puis `app = p_app`, et un `_ready()` qui construit le
+   plateau puis appelle `_construire_interface()`.
+2. Redéfinir : `_niveaux()`, `_noms()`, `_materiau_joueur(j)`, `_aide()`,
+   `_y_bandeau()`, `_preparer_partie()`, `_lancer_ia()` (renvoie
+   `[objet, Callable]`), `_coup_ia(resultat)`, `_anim(a, k, delta)`.
+   Fin de partie : `_annoncer_fin(gagnant, détail)`.
+3. Les cases cliquables : `UI.zone(...)` avec `Cible.new(survol, choix)`.
+4. L'ajouter dans `JEUX` de `scripts/main.gd` (même identifiant que dans
+   `CATEGORIES` de `scripts/accueil.gd`). Le bouton passe seul à « Jouer ».
+5. L'IA a toujours une limite de temps : un calcul long dans la boucle fait
+   saccader l'image dans le casque.
 
 ## Pièges GDScript déjà rencontrés
 
@@ -84,7 +97,7 @@ shaders/                   parquet, bois, papier peint, feutre, tapis, ciel, dé
 | Jeu          | Catégorie | État |
 |--------------|-----------|------|
 | Puissance 4  | Plateau   | jouable : contre l'ordinateur (3 niveaux) ou à deux |
-| Reversi      | Plateau   | à faire |
+| Reversi      | Plateau   | jouable : contre l'ordinateur (3 niveaux) ou à deux, passe automatique |
 | Abalone      | Plateau   | à faire |
 | Awalé        | Plateau   | à faire |
 | Le Président | Cartes    | à faire |

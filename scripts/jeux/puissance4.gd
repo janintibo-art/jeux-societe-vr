@@ -1,11 +1,8 @@
-extends Node3D
+extends "res://scripts/jeux/table_jeu.gd"
 ## Puissance 4 sur la table du salon : contre l'ordinateur (3 niveaux) ou à deux.
 
-const UI := preload("res://scripts/ui.gd")
-const Bouton := preload("res://scripts/bouton.gd")
 const Formes := preload("res://scripts/formes.gd")
 const IA := preload("res://scripts/jeux/puissance4_ia.gd")
-const Confettis := preload("res://scripts/confettis.gd")
 
 const COLS := 7
 const ROWS := 6
@@ -29,60 +26,63 @@ const NIVEAUX := [
 	{"nom": "Moyen", "prof": 4, "hasard": 0.05, "temps": 700},
 	{"nom": "Difficile", "prof": 9, "hasard": 0.0, "temps": 1500},
 ]
-const NOMS := {1: "Rouge", 2: "Jaune"}
-
-var app
-var depart := {}
 
 var _plateau: Node3D
 var _jeton_geo: ArrayMesh
 var _fantome: MeshInstance3D
 var _atterrissage: MeshInstance3D
-var _statut: Label3D
-var _statut_sous: Label3D
-var _statut_pastille: MeshInstance3D
-var _scores_txt: Array[Label3D] = []
-var _noms_txt: Array[Label3D] = []
-var _btn_mode: Bouton
-var _btn_niveau: Bouton
-var _confettis: Confettis
-
-var _mode := "ia"
-var _niveau := 1
-var _scores := {1: 0, 2: 0}
-var _premier := 1
-var _partie := 0
 var _grille: Array = []
 var _cases: Array = []
 var _piles := {1: [], 2: []}
 var _coups := 0
-var _joueur := 1
-var _occupe := false
-var _fini := false
 var _colonne_visee := -1
-var _anims: Array = []
 var _ligne_gagnante: Array = []
 var _t_victoire := 0.0
-var _demarre := false
-
-var _fil: Thread
-var _ia: IA
-var _fil_partie := -1
-var _fil_debut := 0
 
 
 func _init(p_app) -> void:
+	super()
 	app = p_app
-	position = Vector3(0, 0.76, 3.6)
-	depart = {"position": Vector3(0, 0, 3.6 + 0.78), "lacet": 0.0, "tangage": -0.55}
 
 
 func _ready() -> void:
 	_jeton_geo = Formes.jeton(JETON_R, JETON_E)
 	_construire_plateau()
 	_construire_interface()
-	_confettis = Confettis.new()
-	add_child(_confettis)
+
+
+# ------------------------------------------------------------------ redéfinitions
+
+func _niveaux() -> Array:
+	return NIVEAUX
+
+
+func _noms() -> Dictionary:
+	return {1: "Rouge", 2: "Jaune"}
+
+
+func _materiau_joueur(j: int) -> Material:
+	return app.materiau_jeton(j)
+
+
+func _forme_pastille() -> Mesh:
+	return _jeton_geo
+
+
+func _echelle_pastille() -> float:
+	return 0.4
+
+
+func _aide() -> String:
+	return "Visez une colonne et appuyez sur la gâchette"
+
+
+func _y_bandeau() -> float:
+	return HAUT + 0.16
+
+
+func _partie_entamee() -> bool:
+	return _coups > 0
 
 
 # ------------------------------------------------------------------ construction
@@ -95,7 +95,6 @@ func _construire_plateau() -> void:
 	bleu.albedo_color = Color(0.07, 0.24, 0.75)
 	bleu.roughness = 0.22
 	bleu.metallic_specular = 0.7
-	bleu.rim_enabled = false
 	var plaque_avant := MeshInstance3D.new()
 	plaque_avant.mesh = Formes.plaque_trouee(COLS, ROWS, CELL, TROU, MARGE, PIEDS, FENTE / 2.0 + PLAQUE, FENTE / 2.0)
 	plaque_avant.material_override = bleu
@@ -155,125 +154,6 @@ func _boite(taille: Vector3, pos: Vector3, mat: Material) -> MeshInstance3D:
 	return mi
 
 
-func _construire_interface() -> void:
-	var oeil := global_transform.origin + Vector3(0, 0.75, 0.78)
-	if not is_inside_tree():
-		oeil = position + Vector3(0, 0.75, 0.78)
-
-	# Bandeau d'état au-dessus du plateau
-	var bandeau := Node3D.new()
-	bandeau.position = Vector3(0, HAUT + 0.16, -0.08)
-	add_child(bandeau)
-	_orienter(bandeau, oeil)
-	bandeau.add_child(UI.panneau(Vector2(0.7, 0.11), {"radius": 0.03, "border": 0.0025}, 0.0))
-	_statut = UI.texte("", 0.042, UI.CREME, UI.police_gras())
-	_statut.position = Vector3(0.015, 0.012, 0.003)
-	bandeau.add_child(_statut)
-	_statut_sous = UI.texte("", 0.022, Color(0.91, 0.84, 0.7, 0.75))
-	_statut_sous.position = Vector3(0, -0.03, 0.003)
-	bandeau.add_child(_statut_sous)
-	_statut_pastille = MeshInstance3D.new()
-	var sp := SphereMesh.new()
-	sp.radius = 0.012
-	sp.height = 0.024
-	_statut_pastille.mesh = sp
-	_statut_pastille.position = Vector3(-0.2, 0.012, 0.01)
-	bandeau.add_child(_statut_pastille)
-
-	# Scores à gauche
-	var tableau := Node3D.new()
-	tableau.position = Vector3(-0.6, 0.42, 0.1)
-	add_child(tableau)
-	_orienter(tableau, oeil)
-	tableau.add_child(UI.panneau(Vector2(0.3, 0.2), {"radius": 0.03, "border": 0.0025}, 0.0))
-	var titre := UI.texte("Score", 0.03, UI.OR, UI.police_titre())
-	titre.position = Vector3(0, 0.066, 0.003)
-	tableau.add_child(titre)
-	for i in 2:
-		var y := 0.01 - i * 0.06
-		var pastille := MeshInstance3D.new()
-		pastille.mesh = _jeton_geo
-		pastille.material_override = app.materiau_jeton(1 + i)
-		pastille.scale = Vector3.ONE * 0.45
-		pastille.position = Vector3(-0.11, y, 0.005)
-		tableau.add_child(pastille)
-		var nom := UI.texte("", 0.026, UI.CREME, UI.police_gras())
-		nom.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-		nom.position = Vector3(-0.085, y, 0.003)
-		tableau.add_child(nom)
-		_noms_txt.append(nom)
-		var sc := UI.texte("0", 0.034, UI.CREME, UI.police_gras())
-		sc.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		sc.position = Vector3(0.125, y, 0.003)
-		tableau.add_child(sc)
-		_scores_txt.append(sc)
-
-	# Commandes à droite
-	var cmd := Node3D.new()
-	cmd.position = Vector3(0.6, 0.4, 0.1)
-	add_child(cmd)
-	_orienter(cmd, oeil)
-	var items := [
-		["Nouvelle partie", _nouvelle_partie, UI.OR],
-		["", _changer_mode, UI.OR],
-		["", _changer_niveau, UI.OR],
-		["Retour au salon", func(): app.retour_accueil(), Color(0.62, 0.71, 0.78)],
-	]
-	for i in items.size():
-		var b := Bouton.new(Vector2(0.3, 0.072), items[i][0], "", "", items[i][2], true)
-		b.sons = app.sons
-		b.placer(Vector3(0, 0.135 - i * 0.09, 0))
-		b.choisi.connect(items[i][1])
-		cmd.add_child(b)
-		if i == 1:
-			_btn_mode = b
-		elif i == 2:
-			_btn_niveau = b
-	_rafraichir_boutons()
-
-
-func _orienter(n: Node3D, oeil: Vector3) -> void:
-	# Oriente la face avant (+Z) du nœud vers l'œil, en coordonnées locales du jeu.
-	var cible := oeil - position
-	var b := Basis.looking_at(-(cible - n.position).normalized(), Vector3.UP)
-	n.basis = b
-
-
-func _rafraichir_boutons() -> void:
-	_btn_mode.definir("Contre l’ordinateur" if _mode == "ia" else "À deux joueurs")
-	_btn_niveau.definir("Niveau : %s" % NIVEAUX[_niveau].nom, _mode == "ia")
-	var noms := ["Vous", "Ordinateur"] if _mode == "ia" else ["Rouge", "Jaune"]
-	for i in 2:
-		_noms_txt[i].text = noms[i]
-		_scores_txt[i].text = str(_scores[i + 1])
-
-
-func _ecrire_statut(texte: String, joueur := 0, sous := "") -> void:
-	_statut.text = texte
-	_statut_sous.text = sous
-	_statut.position.y = 0.012 if sous != "" else 0.0
-	_statut_pastille.visible = joueur != 0
-	if joueur != 0:
-		_statut_pastille.material_override = app.materiau_jeton(joueur)
-		var largeur := UI.police_gras().get_string_size(texte, HORIZONTAL_ALIGNMENT_LEFT, -1, 64).x * _statut.pixel_size
-		_statut_pastille.position = Vector3(-largeur / 2.0 - 0.012, _statut.position.y, 0.01)
-		_statut.position.x = 0.015
-	else:
-		_statut.position.x = 0.0
-
-
-func _maj_statut() -> void:
-	if _fini:
-		return
-	if _mode == "ia":
-		if _joueur == 1:
-			_ecrire_statut("À vous de jouer", 1, "Visez une colonne et appuyez sur la gâchette")
-		else:
-			_ecrire_statut("L’ordinateur réfléchit…", 2)
-	else:
-		_ecrire_statut("Au tour de %s" % NOMS[_joueur], _joueur)
-
-
 # ------------------------------------------------------------------ outils
 
 func _col_x(c: int) -> float:
@@ -291,12 +171,6 @@ func _plus_bas(c: int) -> int:
 	return -1
 
 
-func _tour_ia() -> bool:
-	return _mode == "ia" and _joueur == 2 and not _fini
-
-
-# ------------------------------------------------------------------ piles
-
 func _pos_pile(joueur: int, i: int) -> Vector3:
 	var cote := -1.0 if joueur == 1 else 1.0
 	var tas := i / 7
@@ -305,25 +179,9 @@ func _pos_pile(joueur: int, i: int) -> Vector3:
 	return Vector3(cote * (0.4 + dec.x), 0.003 + JETON_E / 2.0 + k * (JETON_E + 0.0004), 0.1 + dec.y)
 
 
-func _construire_piles() -> void:
-	_piles = {1: [], 2: []}
-	for j in [1, 2]:
-		for i in 21:
-			var m := MeshInstance3D.new()
-			m.mesh = _jeton_geo
-			m.material_override = app.materiau_jeton(j)
-			m.position = _pos_pile(j, i)
-			m.rotation = Vector3(-PI / 2.0, 0, randf() * TAU)
-			m.scale = Vector3.ONE * 0.001
-			add_child(m)
-			_piles[j].append(m)
-			_anims.append({"type": "pousse", "t": -i * 0.015, "duree": 0.25, "m": m})
-
-
 # ------------------------------------------------------------------ déroulement
 
-func _nouvelle_partie() -> void:
-	_partie += 1
+func _preparer_partie() -> void:
 	var anciens: Array = []
 	for col in _cases:
 		for m in col:
@@ -337,11 +195,7 @@ func _nouvelle_partie() -> void:
 		if a.type == "sortie":
 			restes.append(a)
 	_anims = restes
-	for i in anciens.size():
-		var m: Node3D = anciens[i]
-		_anims.append({"type": "sortie", "t": -i * 0.008, "duree": 0.35, "m": m, "y": m.position.y})
-	if not anciens.is_empty():
-		app.sons.jouer("souffle", -6.0)
+	_faire_sortir(anciens)
 
 	_grille = []
 	_cases = []
@@ -350,30 +204,18 @@ func _nouvelle_partie() -> void:
 		_cases.append([null, null, null, null, null, null])
 	_coups = 0
 	_ligne_gagnante = []
-	_fini = false
-	_occupe = false
-	_joueur = _premier
-	_premier = 3 - _premier
-	_construire_piles()
-	_rafraichir_boutons()
-	_maj_statut()
+	_piles = {1: [], 2: []}
+	for j in [1, 2]:
+		for i in 21:
+			var m := MeshInstance3D.new()
+			m.mesh = _jeton_geo
+			m.material_override = app.materiau_jeton(j)
+			m.position = _pos_pile(j, i)
+			m.rotation = Vector3(-PI / 2.0, 0, randf() * TAU)
+			add_child(m)
+			_piles[j].append(m)
+			_faire_apparaitre(m, i * 0.015)
 	_maj_fantome()
-	if _tour_ia():
-		_demander_ia()
-
-
-func _changer_mode() -> void:
-	_mode = "duo" if _mode == "ia" else "ia"
-	_scores = {1: 0, 2: 0}
-	_premier = 1
-	_nouvelle_partie()
-
-
-func _changer_niveau() -> void:
-	_niveau = (_niveau + 1) % NIVEAUX.size()
-	_rafraichir_boutons()
-	if _coups == 0 or _fini:
-		_nouvelle_partie()
 
 
 func _jouer_humain(c: int) -> void:
@@ -453,66 +295,35 @@ func _cherche_ligne(c: int, r: int, p: int) -> Array:
 
 
 func _terminer(gagnant: int, ligne: Array) -> void:
-	_fini = true
-	_occupe = false
+	_annoncer_fin(gagnant, "" if gagnant != 0 else "Le plateau est plein")
 	_maj_fantome()
 	if gagnant == 0:
-		_ecrire_statut("Match nul !", 0, "Le plateau est plein")
-		app.sons.jouer("nul")
 		return
-	_scores[gagnant] += 1
-	_rafraichir_boutons()
 	_ligne_gagnante = []
 	for p in ligne:
 		_ligne_gagnante.append(_cases[p.x][p.y])
 	_t_victoire = 0.0
-	var perdu := _mode == "ia" and gagnant == 2
-	var sous := "Appuyez sur « Nouvelle partie » pour rejouer"
-	if _mode == "ia":
-		_ecrire_statut("L’ordinateur gagne" if perdu else "Vous avez gagné !", gagnant, sous)
-	else:
-		_ecrire_statut("%s gagne !" % NOMS[gagnant], gagnant, sous)
-	if perdu:
-		app.sons.jouer("defaite")
-	else:
-		app.sons.jouer("victoire")
+	if not (_mode == "ia" and gagnant == 2):
 		var centre := Vector3.ZERO
 		for m in _ligne_gagnante:
 			centre += (m as Node3D).position
-		centre = centre / _ligne_gagnante.size() + _plateau.position
-		_confettis.lancer(centre)
+		_confettis.lancer(centre / _ligne_gagnante.size() + _plateau.position)
 
 
-# ------------------------------------------------------------------ IA (fil séparé)
+# ------------------------------------------------------------------ IA
 
-func _demander_ia() -> void:
-	if _fil != null:
-		return
+func _lancer_ia() -> Array:
 	var plateau := PackedByteArray()
 	plateau.resize(COLS * ROWS)
 	for c in COLS:
 		for r in ROWS:
 			plateau[c * ROWS + r] = _grille[c][r]
 	var nv: Dictionary = NIVEAUX[_niveau]
-	_fil_partie = _partie
-	_fil_debut = Time.get_ticks_msec()
-	_fil = Thread.new()
-	_ia = IA.new()
-	_fil.start(_ia.choisir.bind(plateau, 2, nv.prof, nv.hasard, nv.temps))
-	_maj_statut()
+	var ia := IA.new()
+	return [ia, ia.choisir.bind(plateau, 2, nv.prof, nv.hasard, nv.temps)]
 
 
-func _verifier_ia() -> void:
-	if _fil == null or _fil.is_alive():
-		return
-	if Time.get_ticks_msec() - _fil_debut < 650:
-		return
-	var col: int = _fil.wait_to_finish()
-	_fil = null
-	if _fil_partie != _partie or _fini or not _tour_ia() or _occupe:
-		if _tour_ia() and not _occupe:
-			_demander_ia()
-		return
+func _coup_ia(col) -> void:
 	_jouer(col)
 
 
@@ -537,77 +348,47 @@ func _maj_fantome() -> void:
 	_atterrissage.position = Vector3(_col_x(c), _rang_y(_plus_bas(c)), 0)
 
 
-# ------------------------------------------------------------------ cycle de vie
-
-func entrer() -> void:
-	if not _demarre:
-		_demarre = true
-		_nouvelle_partie()
-	elif _tour_ia() and not _occupe:
-		_demander_ia()
-
-
 func sortir() -> void:
 	_viser(-1)
 
 
-func _process(delta: float) -> void:
-	_verifier_ia()
-	_confettis.mettre_a_jour(delta)
+# ------------------------------------------------------------------ animations
+
+func _anim(a: Dictionary, k: float, delta: float) -> bool:
+	var m: Node3D = a.m
+	match a.type:
+		"vol":
+			var e := smoothstep(0.0, 1.0, k)
+			m.position = (a.de as Vector3).lerp(a.vers, e) + Vector3(0, sin(PI * k) * 0.12, 0)
+			m.quaternion = (a.de_q as Quaternion).slerp(Quaternion.IDENTITY, e)
+			if k >= 1.0:
+				a.type = "chute"
+				a.v = 0.0
+				a.rebonds = 0
+				m.quaternion = Quaternion.IDENTITY
+			return true
+		"chute":
+			a.v -= GRAVITE * delta
+			m.position.y += a.v * delta
+			var cible := _rang_y(a.r)
+			if m.position.y > cible:
+				return true
+			m.position.y = cible
+			var vitesse: float = -a.v
+			if a.rebonds == 0:
+				app.sons.jouer_a("clac", m.global_position, linear_to_db(clampf(0.4 + vitesse * 0.4, 0.2, 1.0)))
+			if vitesse > 0.35 and a.rebonds < 2:
+				a.v = vitesse * 0.28
+				a.rebonds += 1
+				return true
+			_pose(a)
+			return false
+	return false
+
+
+func _mettre_a_jour(delta: float) -> void:
 	if _fantome.visible:
 		_fantome.position.y = Y_LACHER + sin(Time.get_ticks_msec() * 0.004) * 0.006
-
-	var garder: Array = []
-	for a in _anims:
-		a.t += delta
-		if a.t < 0.0:
-			garder.append(a)
-			continue
-		var k: float = min(1.0, a.t / a.duree)
-		var m: Node3D = a.m
-		match a.type:
-			"pousse":
-				m.scale = Vector3.ONE * max(0.001, smoothstep(0.0, 1.0, k))
-				if k < 1.0:
-					garder.append(a)
-			"sortie":
-				m.position.y = a.y - smoothstep(0.0, 1.0, k) * 0.1
-				m.scale = Vector3.ONE * max(0.001, 1.0 - smoothstep(0.0, 1.0, k))
-				if k < 1.0:
-					garder.append(a)
-				else:
-					m.queue_free()
-			"vol":
-				var e := smoothstep(0.0, 1.0, k)
-				m.position = (a.de as Vector3).lerp(a.vers, e) + Vector3(0, sin(PI * k) * 0.12, 0)
-				m.quaternion = (a.de_q as Quaternion).slerp(Quaternion.IDENTITY, e)
-				if k < 1.0:
-					garder.append(a)
-				else:
-					a.type = "chute"
-					a.v = 0.0
-					a.rebonds = 0
-					m.quaternion = Quaternion.IDENTITY
-					garder.append(a)
-			"chute":
-				a.v -= GRAVITE * delta
-				m.position.y += a.v * delta
-				var cible := _rang_y(a.r)
-				if m.position.y <= cible:
-					m.position.y = cible
-					var vitesse: float = -a.v
-					if a.rebonds == 0:
-						app.sons.jouer_a("clac", m.global_position, linear_to_db(clampf(0.4 + vitesse * 0.4, 0.2, 1.0)))
-					if vitesse > 0.35 and a.rebonds < 2:
-						a.v = vitesse * 0.28
-						a.rebonds += 1
-						garder.append(a)
-					else:
-						_pose(a)
-				else:
-					garder.append(a)
-	_anims = garder
-
 	if _fini and not _ligne_gagnante.is_empty():
 		_t_victoire += delta
 		var lueur := maxf(0.0, 0.35 + sin(_t_victoire * 6.0) * 0.3)
@@ -617,18 +398,3 @@ func _process(delta: float) -> void:
 			mat.emission = Color(1.0, 0.82, 0.48)
 			mat.emission_energy_multiplier = lueur
 
-
-class Cible:
-	extends RefCounted
-	var _survol: Callable
-	var _choix: Callable
-
-	func _init(s: Callable, c: Callable) -> void:
-		_survol = s
-		_choix = c
-
-	func survol(on: bool) -> void:
-		_survol.call(on)
-
-	func choisir() -> void:
-		_choix.call()

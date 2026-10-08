@@ -11,6 +11,7 @@ const Accueil := preload("res://scripts/accueil.gd")
 ## Jeux disponibles : identifiant (celui de CATEGORIES dans accueil.gd) → script.
 const JEUX := {
 	"puissance4": preload("res://scripts/jeux/puissance4.gd"),
+	"reversi": preload("res://scripts/jeux/reversi.gd"),
 }
 
 var sons: Node

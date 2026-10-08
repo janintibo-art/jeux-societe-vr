@@ -8,7 +8,7 @@ d'accueil, puis on joue à la table, contre l'ordinateur ou à deux.
 
 ## Jeux
 
-- **Plateau** : Puissance 4 ✔ · Reversi · Abalone · Awalé
+- **Plateau** : Puissance 4 ✔ · Reversi ✔ · Abalone · Awalé
 - **Cartes** : Le Président · Le Tarot
 - **Dés** : Le 421 · Le 10 000
 
