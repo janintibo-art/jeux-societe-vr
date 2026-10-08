@@ -1,0 +1,98 @@
+name: APK Quest
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: "4.7.2"
+  VENDORS_VERSION: "5.1.0"
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@v4
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Cache de Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-vendors-${{ env.VENDORS_VERSION }}
+
+      - name: Cache de Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ env.GODOT_VERSION }}-${{ env.VENDORS_VERSION }}
+
+      - name: Téléchargement de Godot et du plugin Meta
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          base=https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable
+          curl -fsSL -o godot.zip "$base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip && mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot && rm godot.zip
+          curl -fsSL -o templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q templates.tpz 'templates/android_*' 'templates/version.txt' -d tpl && rm templates.tpz
+          curl -fsSL -o vendors.zip "https://github.com/GodotVR/godot_openxr_vendors/releases/download/${VENDORS_VERSION}-stable/godotopenxrvendorsaddon.zip"
+
+      - name: Installation de Godot, du modèle Android et du plugin
+        run: |
+          dest=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mkdir -p "$dest" && cp ~/godot/tpl/templates/* "$dest/"
+          rm -rf /tmp/vendors && unzip -q ~/godot/vendors.zip -d /tmp/vendors
+          mkdir -p addons && cp -r /tmp/vendors/asset/addons/godotopenxrvendors addons/
+          mkdir -p ~/.config/godot
+          printf '[gd_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/java_sdk_path = "%s"\n' "$ANDROID_SDK_ROOT" "$JAVA_HOME" > ~/.config/godot/editor_settings-${GODOT_VERSION%.*}.tres
+          sed -i "s/^version\/code=.*/version\/code=${{ github.run_number }}/; s/^version\/name=.*/version\/name=\"1.0.${{ github.run_number }}\"/" export_presets.cfg
+
+      - name: Import du projet (vérifie aussi les scripts)
+        run: |
+          ~/godot/godot --headless --path . --import 2>&1 | tee import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script" import.log; then
+            echo "::error::Erreur dans un script GDScript (voir ci-dessus)"
+            exit 1
+          fi
+
+      - name: Compilation de l'APK
+        env:
+          GODOT_ANDROID_KEYSTORE_RELEASE_PATH: ${{ github.workspace }}/salon.keystore
+          GODOT_ANDROID_KEYSTORE_RELEASE_USER: salon
+          GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD: salonjeux2026
+        run: |
+          mkdir -p build
+          ~/godot/godot --headless --path . --install-android-build-template --export-release "Meta Quest" build/salon_des_jeux.apk 2>&1 | tee export.log
+          if [ ! -f build/salon_des_jeux.apk ]; then
+            echo "::error::L'APK n'a pas été produit (voir le journal ci-dessus)"
+            exit 1
+          fi
+          ls -lh build/salon_des_jeux.apk
+
+      - name: Publication dans « derniere »
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete derniere --yes --cleanup-tag || true
+          gh release create derniere build/salon_des_jeux.apk \
+            --title "Salon des Jeux VR — version 1.0.${{ github.run_number }}" \
+            --notes "APK pour Meta Quest 3, compilé automatiquement à partir du commit ${{ github.sha }}." \
+            --latest

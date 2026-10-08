@@ -1,0 +1,6 @@
+.godot/
+/android/
+addons/godotopenxrvendors/
+*.apk
+*.aab
+*.import
