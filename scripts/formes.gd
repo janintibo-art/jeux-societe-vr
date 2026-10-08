@@ -190,3 +190,30 @@ static func rideau(largeur: float, hauteur: float, plis := 5.0, profondeur := 0.
 		tri(st, [Vector3(xa, 0, za), Vector3(xb, 0, zb), Vector3(xb, hauteur, zb)], [na, nb, nb])
 		tri(st, [Vector3(xa, 0, za), Vector3(xb, hauteur, zb), Vector3(xa, hauteur, za)], [na, nb, na])
 	return st.commit()
+
+
+## Pointe de flèche plate (pointe vers +Z), pour indiquer une direction sur un plateau.
+static func fleche(longueur := 0.05, largeur := 0.044, ep := 0.008) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var h := ep / 2.0
+	var pts := [Vector2(0, longueur * 0.55), Vector2(-largeur / 2.0, -longueur * 0.45),
+		Vector2(0, -longueur * 0.2), Vector2(largeur / 2.0, -longueur * 0.45)]
+	for face in [[h, Vector3.UP], [-h, Vector3.DOWN]]:
+		var y: float = face[0]
+		var n: Vector3 = face[1]
+		var p := []
+		for q in pts:
+			p.append(Vector3(q.x, y, q.y))
+		tri(st, [p[0], p[1], p[2]], [n, n, n])
+		tri(st, [p[0], p[2], p[3]], [n, n, n])
+	for i in 4:
+		var a: Vector2 = pts[i]
+		var b: Vector2 = pts[(i + 1) % 4]
+		var d := b - a
+		var n2 := Vector3(d.y, 0, -d.x).normalized()
+		var centre := Vector3(0, 0, 0)
+		if n2.dot(Vector3((a.x + b.x) / 2.0, 0, (a.y + b.y) / 2.0) - centre) < 0.0:
+			n2 = -n2
+		quad(st, Vector3(a.x, h, a.y), Vector3(b.x, h, b.y), Vector3(b.x, -h, b.y), Vector3(a.x, -h, a.y), n2)
+	return st.commit()

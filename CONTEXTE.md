@@ -62,6 +62,8 @@ scripts/jeux/reversi.gd        Reversi
 scripts/jeux/reversi_ia.gd     IA Reversi (poids des cases, mobilité, finale exacte)
 scripts/jeux/awale.gd          Awalé (tablier creusé en CSG, semis animé graine par graine)
 scripts/jeux/awale_ia.gd       règles abapa + IA Awalé
+scripts/jeux/abalone.gd        Abalone (plateau hexagonal, sélection + flèches)
+scripts/jeux/abalone_ia.gd     règles (sumito) + IA Abalone (centre, cohésion, menaces)
 shaders/                   parquet, bois, papier peint, feutre, tapis, ciel, dé, panneaux, plateau Reversi
 ```
 
@@ -102,7 +104,7 @@ de disparition, confettis, annonce de fin.
 |--------------|-----------|------|
 | Puissance 4  | Plateau   | jouable : contre l'ordinateur (3 niveaux) ou à deux |
 | Reversi      | Plateau   | jouable : contre l'ordinateur (3 niveaux) ou à deux, passe automatique |
-| Abalone      | Plateau   | à faire |
+| Abalone      | Plateau   | jouable : sélection de 1 à 3 billes puis flèche, aperçu du coup, 3 niveaux ou à deux |
 | Awalé        | Plateau   | jouable : règles abapa (nourrir, pas de grand chelem), 3 niveaux ou à deux |
 | Le Président | Cartes    | à faire |
 | Le Tarot     | Cartes    | à faire |

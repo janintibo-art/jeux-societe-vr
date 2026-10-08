@@ -125,6 +125,7 @@ func _construire_interface() -> void:
 	bandeau.add_child(_statut_sous)
 	_statut_pastille = MeshInstance3D.new()
 	_statut_pastille.mesh = _forme_pastille()
+	_statut_pastille.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_statut_pastille.scale = Vector3.ONE * _echelle_pastille()
 	_statut_pastille.position = Vector3(-0.2, 0.012, 0.01)
 	bandeau.add_child(_statut_pastille)
@@ -141,6 +142,7 @@ func _construire_interface() -> void:
 		var y := 0.01 - i * 0.06
 		var pastille := MeshInstance3D.new()
 		pastille.mesh = _forme_pastille()
+		pastille.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		pastille.scale = Vector3.ONE * _echelle_pastille()
 		pastille.material_override = _materiau_joueur(1 + i)
 		pastille.position = Vector3(-0.11, y, 0.012)
@@ -198,6 +200,11 @@ func _rafraichir_boutons() -> void:
 func _ecrire_statut(texte: String, joueur := 0, sous := "") -> void:
 	_statut.text = texte
 	_statut_sous.text = sous
+	# Le sous-titre rétrécit s'il est trop long pour le bandeau.
+	_statut_sous.pixel_size = 0.022 / 64.0
+	var ls := _statut_sous.font.get_string_size(sous, HORIZONTAL_ALIGNMENT_LEFT, -1, 64).x * _statut_sous.pixel_size
+	if ls > 0.64:
+		_statut_sous.pixel_size *= 0.64 / ls
 	_statut.position.y = 0.012 if sous != "" else 0.0
 	_statut_pastille.visible = joueur != 0
 	if joueur != 0:
