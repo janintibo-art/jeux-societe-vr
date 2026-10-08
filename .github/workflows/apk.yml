@@ -18,26 +18,26 @@ env:
 
 jobs:
   apk:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Récupération du code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Cache de Godot
         id: cache-godot
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/godot
           key: godot-${{ env.GODOT_VERSION }}-vendors-${{ env.VENDORS_VERSION }}
 
       - name: Cache de Gradle
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.gradle/caches
@@ -87,6 +87,13 @@ jobs:
           fi
           ls -lh build/salon_des_jeux.apk
 
+      - name: APK téléchargeable depuis cette page
+        uses: actions/upload-artifact@v7
+        with:
+          name: salon_des_jeux_apk
+          path: build/salon_des_jeux.apk
+          retention-days: 30
+
       - name: Publication dans « derniere »
         env:
           GH_TOKEN: ${{ github.token }}
@@ -96,3 +103,15 @@ jobs:
             --title "Salon des Jeux VR — version 1.0.${{ github.run_number }}" \
             --notes "APK pour Meta Quest 3, compilé automatiquement à partir du commit ${{ github.sha }}." \
             --latest
+
+      - name: Résumé avec le lien direct
+        run: |
+          taille=$(du -h build/salon_des_jeux.apk | cut -f1)
+          lien="https://github.com/${{ github.repository }}/releases/download/derniere/salon_des_jeux.apk"
+          {
+            echo "## 🎲 Salon des Jeux VR — version 1.0.${{ github.run_number }}"
+            echo ""
+            echo "APK prête ($taille) : **[télécharger salon_des_jeux.apk]($lien)**"
+            echo ""
+            echo "Aussi dans la case *Artifacts* ci-dessous (fichier zippé) et dans la version [derniere](https://github.com/${{ github.repository }}/releases/tag/derniere)."
+          } >> "$GITHUB_STEP_SUMMARY"
