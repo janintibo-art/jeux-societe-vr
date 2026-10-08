@@ -12,6 +12,7 @@ const Accueil := preload("res://scripts/accueil.gd")
 const JEUX := {
 	"puissance4": preload("res://scripts/jeux/puissance4.gd"),
 	"reversi": preload("res://scripts/jeux/reversi.gd"),
+	"awale": preload("res://scripts/jeux/awale.gd"),
 }
 
 var sons: Node

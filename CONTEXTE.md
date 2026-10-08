@@ -60,6 +60,8 @@ scripts/jeux/puissance4.gd     Puissance 4
 scripts/jeux/puissance4_ia.gd  IA Puissance 4 (fil séparé, temps limité)
 scripts/jeux/reversi.gd        Reversi
 scripts/jeux/reversi_ia.gd     IA Reversi (poids des cases, mobilité, finale exacte)
+scripts/jeux/awale.gd          Awalé (tablier creusé en CSG, semis animé graine par graine)
+scripts/jeux/awale_ia.gd       règles abapa + IA Awalé
 shaders/                   parquet, bois, papier peint, feutre, tapis, ciel, dé, panneaux, plateau Reversi
 ```
 
@@ -87,6 +89,8 @@ de disparition, confettis, annonce de fin.
 ## Pièges GDScript déjà rencontrés
 
 - `trait` est un mot réservé (Godot 4.7).
+- Les formes creusées (trous de l'Awalé) passent par les nœuds CSG : ils
+  fonctionnent à l'exécution, y compris sur le casque.
 - `max()`, `min()`, `abs()` renvoient un Variant : avec `:=`, utiliser
   `maxf`, `minf`, `absf`.
 - Appeler une méthode d'un script sur une variable typée `Node`/`Node3D`
@@ -99,7 +103,7 @@ de disparition, confettis, annonce de fin.
 | Puissance 4  | Plateau   | jouable : contre l'ordinateur (3 niveaux) ou à deux |
 | Reversi      | Plateau   | jouable : contre l'ordinateur (3 niveaux) ou à deux, passe automatique |
 | Abalone      | Plateau   | à faire |
-| Awalé        | Plateau   | à faire |
+| Awalé        | Plateau   | jouable : règles abapa (nourrir, pas de grand chelem), 3 niveaux ou à deux |
 | Le Président | Cartes    | à faire |
 | Le Tarot     | Cartes    | à faire |
 | Le 421       | Dés       | à faire |
