@@ -14,6 +14,8 @@ const JEUX := {
 	"reversi": preload("res://scripts/jeux/reversi.gd"),
 	"awale": preload("res://scripts/jeux/awale.gd"),
 	"abalone": preload("res://scripts/jeux/abalone.gd"),
+	"421": preload("res://scripts/jeux/jeu_421.gd"),
+	"10000": preload("res://scripts/jeux/jeu_10000.gd"),
 }
 
 var sons: Node

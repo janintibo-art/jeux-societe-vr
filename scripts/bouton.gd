@@ -147,3 +147,14 @@ func _process(delta: float) -> void:
 		position.x = _x0 + sin(_secousse * 70.0) * 0.006 * (_secousse / 0.35)
 	else:
 		position.x = _x0
+
+
+## Affiche ou cache le bouton (un bouton caché ne peut pas être visé).
+func montrer(on: bool) -> void:
+	visible = on
+	for c in get_children():
+		if c is StaticBody3D:
+			(c as StaticBody3D).collision_layer = UI.COUCHE_CIBLES if on else 0
+	if not on and _survol:
+		_survol = false
+		_dessiner()

@@ -27,6 +27,7 @@ func _ready() -> void:
 	], 0.14)
 	_flux["nul"] = _concat([_ton([[440.0, 0.0]], 0.25, 0.25, "triangle"), _ton([[440.0, 0.0]], 0.25, 0.25, "triangle")], 0.2)
 	_flux["feu"] = _crepitement(4.0)
+	_flux["secoue"] = _secouer(0.7)
 	for i in 6:
 		var p := AudioStreamPlayer.new()
 		add_child(p)
@@ -192,3 +193,20 @@ func _crepitement(duree: float) -> AudioStreamWAV:
 			var t := float(j) / longueur
 			out[debut + j] += _rng.randf_range(-1.0, 1.0) * force * pow(1.0 - t, 3.0)
 	return _wav(out, true)
+
+
+## Dés secoués dans un gobelet : petits chocs rapides et irréguliers.
+func _secouer(duree: float) -> AudioStreamWAV:
+	var n := int(duree * FREQ)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var t := 0
+	while t < n - 600:
+		var longueur := _rng.randi_range(80, 260)
+		var force := _rng.randf_range(0.15, 0.5) * (0.6 + 0.4 * sin(float(t) / n * PI))
+		var f := _rng.randf_range(1800.0, 3200.0)
+		for j in longueur:
+			var u := float(j) / longueur
+			out[t + j] += (sin(j * TAU * f / FREQ) * 0.6 + _rng.randf_range(-0.5, 0.5)) * force * pow(1.0 - u, 4.0)
+		t += _rng.randi_range(250, 900)
+	return _wav(out)

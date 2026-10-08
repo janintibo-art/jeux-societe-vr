@@ -64,7 +64,12 @@ scripts/jeux/awale.gd          Awalé (tablier creusé en CSG, semis animé grai
 scripts/jeux/awale_ia.gd       règles abapa + IA Awalé
 scripts/jeux/abalone.gd        Abalone (plateau hexagonal, sélection + flèches)
 scripts/jeux/abalone_ia.gd     règles (sumito) + IA Abalone (centre, cohésion, menaces)
-shaders/                   parquet, bois, papier peint, feutre, tapis, ciel, dé, panneaux, plateau Reversi
+scripts/jeux/piste_des.gd      piste de dés : tapis, rebords, gobelet, dés physiques (Jolt)
+scripts/jeux/jeu_des.gd        BASE des jeux de dés (boutons d'action, déroulement en coroutine)
+scripts/jeux/jeu_421.gd        421 (charge / décharge, rampeau, fiches qui volent)
+scripts/jeux/jeu_10000.gd      10 000 (sélection des dés, main pleine, ouverture à 500)
+shaders/                   parquet, bois, papier peint, feutre, tapis, ciel, dé (avec halo), panneaux,
+                           plateau Reversi, plateau Abalone (ardoise + cercles dorés)
 ```
 
 ## Ajouter un jeu
@@ -93,6 +98,18 @@ de disparition, confettis, annonce de fin.
 - `trait` est un mot réservé (Godot 4.7).
 - Les formes creusées (trous de l'Awalé) passent par les nœuds CSG : ils
   fonctionnent à l'exécution, y compris sur le casque.
+- Physique : le moteur **Jolt** est obligatoire (`project.godot`). Avec le
+  moteur par défaut, les petits dés lancés s'enfoncent dans le tapis et
+  tournent sans fin. Garder aussi une petite marge de collision sur les dés.
+- Jeux de dés : le déroulement est une coroutine (`await`). Après chaque
+  `await`, vérifier `id != _partie` pour abandonner une partie remplacée.
+
+## Inspiration
+
+L'application téléphone « Les Dés du Comptoir » (dépôt
+`janintibo-art/des-du-comptoir`) : mêmes règles pour le 421 et le 10 000,
+même principe de sélection + flèches (rouges si éjection) pour l'Abalone,
+même plateau d'ardoise à cercles dorés.
 - `max()`, `min()`, `abs()` renvoient un Variant : avec `:=`, utiliser
   `maxf`, `minf`, `absf`.
 - Appeler une méthode d'un script sur une variable typée `Node`/`Node3D`
@@ -108,5 +125,5 @@ de disparition, confettis, annonce de fin.
 | Awalé        | Plateau   | jouable : règles abapa (nourrir, pas de grand chelem), 3 niveaux ou à deux |
 | Le Président | Cartes    | à faire |
 | Le Tarot     | Cartes    | à faire |
-| Le 421       | Dés       | à faire |
-| Le 10 000    | Dés       | à faire |
+| Le 421       | Dés       | jouable : dés physiques, gobelet, fiches, charge et décharge |
+| Le 10 000    | Dés       | jouable : sélection des dés, main pleine, ouverture à 500 |

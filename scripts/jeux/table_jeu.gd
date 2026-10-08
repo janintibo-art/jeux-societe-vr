@@ -71,6 +71,15 @@ func _forme_pastille() -> Mesh:
 	return s
 
 
+## Titre et contenu du tableau des scores (parties gagnées par défaut).
+func _titre_score() -> String:
+	return "Score"
+
+
+func _texte_score(j: int) -> String:
+	return str(_scores[j])
+
+
 func _echelle_pastille() -> float:
 	return 1.0
 
@@ -135,7 +144,7 @@ func _construire_interface() -> void:
 	add_child(tableau)
 	_orienter(tableau)
 	tableau.add_child(UI.panneau(Vector2(0.3, 0.2), {"radius": 0.03, "border": 0.0025}, 0.0))
-	var titre := UI.texte("Score", 0.03, UI.OR, UI.police_titre())
+	var titre := UI.texte(_titre_score(), 0.03, UI.OR, UI.police_titre())
 	titre.position = Vector3(0, 0.066, 0.003)
 	tableau.add_child(titre)
 	for i in 2:
@@ -194,7 +203,7 @@ func _rafraichir_boutons() -> void:
 	var noms := ["Vous", "Ordinateur"] if _mode == "ia" else [n[1], n[2]]
 	for i in 2:
 		_noms_txt[i].text = noms[i]
-		_scores_txt[i].text = str(_scores[i + 1])
+		_scores_txt[i].text = _texte_score(i + 1)
 
 
 func _ecrire_statut(texte: String, joueur := 0, sous := "") -> void:

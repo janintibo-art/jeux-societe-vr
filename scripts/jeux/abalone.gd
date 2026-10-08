@@ -38,6 +38,9 @@ var _mat_blanc: StandardMaterial3D
 var _mat_fantome := {}
 var _mat_fleche: StandardMaterial3D
 var _mat_fleche_vise: StandardMaterial3D
+var _mat_fleche_rouge: StandardMaterial3D
+var _mat_fleche_rouge_vise: StandardMaterial3D
+var _mat_sel := {}
 
 
 func _init(p_app) -> void:
@@ -60,6 +63,12 @@ func _ready() -> void:
 	_mat_blanc.albedo_color = Color(0.92, 0.9, 0.86)
 	_mat_blanc.roughness = 0.14
 	_mat_blanc.metallic_specular = 0.7
+	for j in [1, 2]:
+		var sm := (_mat_noir if j == 1 else _mat_blanc).duplicate() as StandardMaterial3D
+		sm.emission_enabled = true
+		sm.emission = Color(0.95, 0.66, 0.28)
+		sm.emission_energy_multiplier = 0.22 if j == 1 else 0.18
+		_mat_sel[j] = sm
 	for j in [1, 2]:
 		var m := (_mat_noir if j == 1 else _mat_blanc).duplicate() as StandardMaterial3D
 		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -96,7 +105,7 @@ func _maj_statut(sous := "") -> void:
 		var n := ["Vous", "Ordinateur"] if _mode == "ia" else ["Noir", "Blanc"]
 		sous = "Sorties : %s %d · %s %d (sur 6)" % [n[0], _sorties[1].size(), n[1], _sorties[2].size()]
 		if not _tour_ia():
-			sous += "  —  vos billes, puis une flèche"
+			sous += "  —  vos billes, puis une flèche (rouge = éjection)"
 	super(sous)
 
 
@@ -121,15 +130,11 @@ func _pos_sortie(j: int, k: int) -> Vector3:
 
 func _construire_plateau() -> void:
 	var bois := ShaderMaterial.new()
-	bois.shader = preload("res://shaders/bois.gdshader")
-	bois.set_shader_parameter("couleur", Color(0.11, 0.055, 0.03))
-	bois.set_shader_parameter("echelle", 10.0)
-	bois.set_shader_parameter("brillance", 0.12)
-	var creux := ShaderMaterial.new()
-	creux.shader = preload("res://shaders/bois.gdshader")
-	creux.set_shader_parameter("couleur", Color(0.06, 0.03, 0.018))
-	creux.set_shader_parameter("echelle", 10.0)
-	creux.set_shader_parameter("brillance", 0.3)
+	bois.shader = preload("res://shaders/abalone_plateau.gdshader")
+	bois.set_shader_parameter("cell", CELL)
+	var creux := StandardMaterial3D.new()
+	creux.albedo_color = Color(0.035, 0.037, 0.042)
+	creux.roughness = 0.4
 	var csg := CSGCombiner3D.new()
 	csg.position = CENTRE
 	add_child(csg)
@@ -204,6 +209,10 @@ func _construire_plateau() -> void:
 	_mat_fleche.albedo_color = Color(0.9, 0.72, 0.35)
 	_mat_fleche_vise = _mat_fleche.duplicate()
 	_mat_fleche_vise.albedo_color = Color(1.0, 0.93, 0.65)
+	_mat_fleche_rouge = _mat_fleche.duplicate()
+	_mat_fleche_rouge.albedo_color = Color(0.85, 0.16, 0.12)
+	_mat_fleche_rouge_vise = _mat_fleche.duplicate()
+	_mat_fleche_rouge_vise.albedo_color = Color(1.0, 0.4, 0.3)
 	var prisme := Formes.fleche(0.036, 0.03, 0.007)
 	for d in 6:
 		var porte := Node3D.new()
@@ -337,6 +346,10 @@ func _meme_ensemble(a: Array, b: Array) -> bool:
 func _maj_selection() -> void:
 	for i in 61:
 		_anneaux[i].visible = _sel.has(i)
+		var n: MeshInstance3D = _noeuds[i] if _noeuds.size() == 61 else null
+		if n:
+			var j := _b[i]
+			n.material_override = _mat_sel[j] if _sel.has(i) else (_mat_noir if j == 1 else _mat_blanc)
 	_coups_possibles = []
 	if _humain_peut_jouer() and not _sel.is_empty():
 		for m in IA.coups(_b, _joueur):
@@ -363,6 +376,7 @@ func _maj_selection() -> void:
 			(f.porte as Node3D).position = Vector3(centre.x, TOP + 0.055, centre.z) + v * (1.1 + avance)
 			(f.mesh as Node3D).rotation.y = atan2(v.x, v.z)
 	_fleche_visee = -1
+	_colorer_fleches()
 	_maj_fantomes()
 
 
@@ -377,9 +391,22 @@ func _ligne_de_cote(m: Dictionary) -> bool:
 
 func _viser_fleche(d: int) -> void:
 	_fleche_visee = d
-	for k in 6:
-		(_fleches[k].mesh as MeshInstance3D).material_override = _mat_fleche_vise if k == d else _mat_fleche
+	_colorer_fleches()
 	_maj_fantomes()
+
+
+## Or pour un déplacement, rouge quand le coup éjecte une bille adverse.
+func _colorer_fleches() -> void:
+	for k in 6:
+		var f: Dictionary = _fleches[k]
+		var rouge: bool = not f.coup.is_empty() and f.coup.sortie
+		var vise := k == _fleche_visee
+		var mat := _mat_fleche
+		if rouge:
+			mat = _mat_fleche_rouge_vise if vise else _mat_fleche_rouge
+		elif vise:
+			mat = _mat_fleche_vise
+		(f.mesh as MeshInstance3D).material_override = mat
 
 
 func _maj_fantomes() -> void:

@@ -2,6 +2,8 @@
 shader_type spatial;
 
 varying float face;
+uniform vec3 halo : source_color = vec3(0.0);
+uniform float halo_force = 0.0;
 
 void vertex() {
 	face = COLOR.r * 6.0;
@@ -40,4 +42,5 @@ void fragment() {
 	ALBEDO = mix(ivoire, point, clamp(m, 0.0, 1.0));
 	ROUGHNESS = 0.25;
 	SPECULAR = 0.6;
+	EMISSION = halo * halo_force;
 }
