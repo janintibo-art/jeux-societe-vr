@@ -1,0 +1,40 @@
+name: Déploiement
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publier:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@v4
+
+      - name: Vérification de la syntaxe JavaScript
+        run: for f in $(find src -name '*.js'); do node --check "$f" || exit 1; done
+
+      - name: Configuration de GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Préparation du site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Mise en ligne
+        id: deploiement
+        uses: actions/deploy-pages@v4
