@@ -28,6 +28,7 @@ func _ready() -> void:
 	_flux["nul"] = _concat([_ton([[440.0, 0.0]], 0.25, 0.25, "triangle"), _ton([[440.0, 0.0]], 0.25, 0.25, "triangle")], 0.2)
 	_flux["feu"] = _crepitement(4.0)
 	_flux["secoue"] = _secouer(0.7)
+	_flux["carte"] = _bruit_carte()
 	for i in 6:
 		var p := AudioStreamPlayer.new()
 		add_child(p)
@@ -209,4 +210,19 @@ func _secouer(duree: float) -> AudioStreamWAV:
 			var u := float(j) / longueur
 			out[t + j] += (sin(j * TAU * f / FREQ) * 0.6 + _rng.randf_range(-0.5, 0.5)) * force * pow(1.0 - u, 4.0)
 		t += _rng.randi_range(250, 900)
+	return _wav(out)
+
+
+## Carte posée ou glissée : souffle bref et clair.
+func _bruit_carte() -> AudioStreamWAV:
+	var n := int(0.09 * FREQ)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var prec := 0.0
+	for i in n:
+		var t := float(i) / n
+		var b := _rng.randf_range(-1.0, 1.0)
+		var aigu := b - prec
+		prec = b
+		out[i] = aigu * 0.35 * pow(1.0 - t, 2.5) * minf(1.0, t * 40.0)
 	return _wav(out)

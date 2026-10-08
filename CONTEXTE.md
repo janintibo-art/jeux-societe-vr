@@ -68,6 +68,9 @@ scripts/jeux/piste_des.gd      piste de dés : tapis, rebords, gobelet, dés phy
 scripts/jeux/jeu_des.gd        BASE des jeux de dés (boutons d'action, déroulement en coroutine)
 scripts/jeux/jeu_421.gd        421 (charge / décharge, rampeau, fiches qui volent)
 scripts/jeux/jeu_10000.gd      10 000 (sélection des dés, main pleine, ouverture à 500)
+scripts/jeux/cartes.gd         cartes 3D : textures avec mipmaps, dos par shader, lueur, zone visable
+scripts/jeux/jeu_president.gd  Président à 4 (éventail en main, adversaires Léon, Margot, Basile)
+cartes/jeu1/                   les 52 cartes « Illustré n°1 » de « Les Dés du Comptoir » (webp)
 shaders/                   parquet, bois, papier peint, feutre, tapis, ciel, dé (avec halo), panneaux,
                            plateau Reversi, plateau Abalone (ardoise + cercles dorés)
 ```
@@ -86,6 +89,10 @@ de disparition, confettis, annonce de fin.
 2. Redéfinir : `_niveaux()`, `_noms()`, `_materiau_joueur(j)`, `_aide()`,
    `_y_bandeau()`, `_preparer_partie()`, `_lancer_ia()` (renvoie
    `[objet, Callable]`), `_coup_ia(resultat)`, `_anim(a, k, delta)`.
+   Jeux pas à pas (dés, cartes) : `_creer_actions(position, vertical)`,
+   `demander([[id, libellé, actif], …])` attend un choix, `proposer(...)`
+   met à jour les boutons, `pause(s)`. Options : `_avec_tableau()`,
+   `_mode_modifiable()`, `_titre_score()`, `_texte_score(j)`.
    Fin de partie : `_annoncer_fin(gagnant, détail)`.
 3. Les cases cliquables : `UI.zone(...)` avec `Cible.new(survol, choix)`.
 4. L'ajouter dans `JEUX` de `scripts/main.gd` (même identifiant que dans
@@ -109,7 +116,8 @@ de disparition, confettis, annonce de fin.
 L'application téléphone « Les Dés du Comptoir » (dépôt
 `janintibo-art/des-du-comptoir`) : mêmes règles pour le 421 et le 10 000,
 même principe de sélection + flèches (rouges si éjection) pour l'Abalone,
-même plateau d'ardoise à cercles dorés.
+même plateau d'ardoise à cercles dorés, mêmes cartes illustrées (jeu1 ; le
+dépôt d'origine contient aussi les tarots « taverne » et « retro »).
 - `max()`, `min()`, `abs()` renvoient un Variant : avec `:=`, utiliser
   `maxf`, `minf`, `absf`.
 - Appeler une méthode d'un script sur une variable typée `Node`/`Node3D`
@@ -123,7 +131,7 @@ même plateau d'ardoise à cercles dorés.
 | Reversi      | Plateau   | jouable : contre l'ordinateur (3 niveaux) ou à deux, passe automatique |
 | Abalone      | Plateau   | jouable : sélection de 1 à 3 billes puis flèche, aperçu du coup, 3 niveaux ou à deux |
 | Awalé        | Plateau   | jouable : règles abapa (nourrir, pas de grand chelem), 3 niveaux ou à deux |
-| Le Président | Cartes    | à faire |
+| Le Président | Cartes    | jouable : 4 joueurs, manches enchaînées avec échanges de cartes |
 | Le Tarot     | Cartes    | à faire |
 | Le 421       | Dés       | jouable : dés physiques, gobelet, fiches, charge et décharge |
 | Le 10 000    | Dés       | jouable : sélection des dés, main pleine, ouverture à 500 |

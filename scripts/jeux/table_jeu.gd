@@ -11,6 +11,8 @@ const Bouton := preload("res://scripts/bouton.gd")
 const Confettis := preload("res://scripts/confettis.gd")
 const Cible := preload("res://scripts/cible.gd")
 
+signal action(id: String)
+
 ## Position de l'œil du joueur, en coordonnées locales de la table.
 const OEIL := Vector3(0, 0.75, 0.78)
 
@@ -43,6 +45,8 @@ var _fil_objet: RefCounted
 var _fil_partie := -1
 var _fil_debut := 0
 var _reflexion := false
+var _boutons: Array = []
+var _ids: Array = []
 
 
 func _init() -> void:
@@ -72,6 +76,20 @@ func _forme_pastille() -> Mesh:
 
 
 ## Titre et contenu du tableau des scores (parties gagnées par défaut).
+## Afficher le tableau des scores (à gauche) ?
+func _avec_tableau() -> bool:
+	return true
+
+
+## Le bouton « Contre l'ordinateur / À deux » est-il utilisable ? Sinon, son libellé.
+func _mode_modifiable() -> bool:
+	return true
+
+
+func _libelle_mode_fixe() -> String:
+	return ""
+
+
 func _titre_score() -> String:
 	return "Score"
 
@@ -141,6 +159,7 @@ func _construire_interface() -> void:
 
 	var tableau := Node3D.new()
 	tableau.position = Vector3(-0.6, 0.42, 0.1)
+	tableau.visible = _avec_tableau()
 	add_child(tableau)
 	_orienter(tableau)
 	tableau.add_child(UI.panneau(Vector2(0.3, 0.2), {"radius": 0.03, "border": 0.0025}, 0.0))
@@ -197,7 +216,10 @@ func _orienter(n: Node3D) -> void:
 
 
 func _rafraichir_boutons() -> void:
-	_btn_mode.definir("Contre l’ordinateur" if _mode == "ia" else "À deux joueurs")
+	if _mode_modifiable():
+		_btn_mode.definir("Contre l’ordinateur" if _mode == "ia" else "À deux joueurs")
+	else:
+		_btn_mode.definir(_libelle_mode_fixe(), false)
 	_btn_niveau.definir("Niveau : %s" % _niveaux()[_niveau].nom, _mode == "ia")
 	var n := _noms()
 	var noms := ["Vous", "Ordinateur"] if _mode == "ia" else [n[1], n[2]]
@@ -386,3 +408,58 @@ func _process(delta: float) -> void:
 				if _anim(a, k, delta):
 					garder.append(a)
 	_mettre_a_jour(delta)
+
+
+# ------------------------------------------------------------------ boutons d'action (jeux pas à pas)
+
+func _creer_actions(pos := Vector3(0, 0.12, 0.33), vertical := false) -> void:
+	var porte := Node3D.new()
+	porte.position = pos
+	add_child(porte)
+	_orienter(porte)
+	for i in 2:
+		var b := Bouton.new(Vector2(0.25, 0.075), "", "", "", UI.OR, true)
+		b.sons = app.sons
+		b.placer(Vector3(0, -i * 0.09, 0) if vertical else Vector3(-0.135 + i * 0.27, 0, 0))
+		var k := i
+		b.choisi.connect(func(): _sur_action(k))
+		porte.add_child(b)
+		b.montrer(false)
+		_boutons.append(b)
+
+
+## Affiche les actions proposées : liste de [id, libellé, actif]. Ne bloque pas.
+func proposer(liste: Array) -> void:
+	_ids = []
+	for i in _boutons.size():
+		var b = _boutons[i]
+		if i < liste.size():
+			var it: Array = liste[i]
+			_ids.append(it[0])
+			b.definir(it[1], it[2])
+			b.montrer(true)
+		else:
+			b.montrer(false)
+
+
+func masquer_actions() -> void:
+	_ids = []
+	for b in _boutons:
+		b.montrer(false)
+
+
+## Affiche les actions et attend le choix du joueur.
+func demander(liste: Array) -> String:
+	proposer(liste)
+	var choix: String = await action
+	masquer_actions()
+	return choix
+
+
+func _sur_action(i: int) -> void:
+	if i < _ids.size():
+		action.emit(_ids[i])
+
+
+func pause(secondes: float) -> void:
+	await get_tree().create_timer(secondes).timeout

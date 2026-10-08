@@ -16,6 +16,7 @@ const JEUX := {
 	"abalone": preload("res://scripts/jeux/abalone.gd"),
 	"421": preload("res://scripts/jeux/jeu_421.gd"),
 	"10000": preload("res://scripts/jeux/jeu_10000.gd"),
+	"president": preload("res://scripts/jeux/jeu_president.gd"),
 }
 
 var sons: Node
